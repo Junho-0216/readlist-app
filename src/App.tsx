@@ -12,6 +12,7 @@ export default function App() {
   const {
     bookmarks,
     syncStatus,
+    syncError,
     token,
     gistId,
     addBookmark,
@@ -55,9 +56,25 @@ export default function App() {
         onImport={() => setShowImport(true)}
         onSettings={() => setShowSettings(true)}
         syncStatus={syncStatus}
+        syncError={syncError}
         onSyncNow={syncNow}
         hasToken={!!token}
       />
+
+      {/* 모바일에서도 보이는 에러 배너 */}
+      {syncStatus === 'error' && syncError && (
+        <div className="bg-red-50 border-b border-red-200 px-4 py-2 flex items-center justify-between gap-2">
+          <p className="text-xs text-red-700 flex-1 min-w-0">
+            <span className="font-semibold">동기화 실패:</span> {syncError}
+          </p>
+          <button
+            onClick={() => setShowSettings(true)}
+            className="text-xs text-red-600 font-semibold underline shrink-0"
+          >
+            설정 확인
+          </button>
+        </div>
+      )}
 
       <FilterBar
         tags={allTags}
@@ -110,6 +127,7 @@ export default function App() {
         <SettingsModal
           token={token}
           gistId={gistId}
+          syncError={syncError}
           onSave={saveSettings}
           onClose={() => setShowSettings(false)}
         />

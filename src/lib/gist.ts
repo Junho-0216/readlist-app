@@ -2,6 +2,8 @@ import type { GistData } from './types'
 
 const FILENAME = 'readlist-data.json'
 const API = 'https://api.github.com'
+const MAX_RETRIES = 3
+const RETRY_DELAY_MS = 1000
 
 function headers(token: string): Record<string, string> {
   return {
@@ -11,8 +13,29 @@ function headers(token: string): Record<string, string> {
   }
 }
 
+async function fetchWithRetry(
+  url: string,
+  options: RequestInit,
+  retries = MAX_RETRIES,
+): Promise<Response> {
+  try {
+    const res = await fetch(url, options)
+    if (!res.ok && res.status >= 500 && retries > 0) {
+      await new Promise(r => setTimeout(r, RETRY_DELAY_MS))
+      return fetchWithRetry(url, options, retries - 1)
+    }
+    return res
+  } catch (err) {
+    if (retries > 0) {
+      await new Promise(r => setTimeout(r, RETRY_DELAY_MS))
+      return fetchWithRetry(url, options, retries - 1)
+    }
+    throw err
+  }
+}
+
 export async function loadFromGist(token: string, gistId: string): Promise<GistData | null> {
-  const res = await fetch(`${API}/gists/${gistId}`, { headers: headers(token) })
+  const res = await fetchWithRetry(`${API}/gists/${gistId}`, { headers: headers(token) })
   if (!res.ok) throw new Error(`HTTP ${res.status}`)
   const gist = await res.json()
   const file = (gist.files as Record<string, { content: string }>)?.[FILENAME]
@@ -28,11 +51,11 @@ export async function saveToGist(token: string, gistId: string | null, data: Gis
   })
 
   if (gistId) {
-    const res = await fetch(`${API}/gists/${gistId}`, { method: 'PATCH', headers: headers(token), body })
+    const res = await fetchWithRetry(`${API}/gists/${gistId}`, { method: 'PATCH', headers: headers(token), body })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     return gistId
   } else {
-    const res = await fetch(`${API}/gists`, { method: 'POST', headers: headers(token), body })
+    const res = await fetchWithRetry(`${API}/gists`, { method: 'POST', headers: headers(token), body })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const gist = await res.json()
     return gist.id as string

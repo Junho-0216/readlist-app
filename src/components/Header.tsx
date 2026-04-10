@@ -1,4 +1,4 @@
-import type { SyncStatus } from '../lib/types'
+import type { SyncStatus, SyncError } from '../lib/types'
 
 interface Props {
   search: string
@@ -7,12 +7,17 @@ interface Props {
   onImport: () => void
   onSettings: () => void
   syncStatus: SyncStatus
+  syncError: SyncError
   onSyncNow: () => void
   hasToken: boolean
 }
 
-function SyncIndicator({ status, onSyncNow, hasToken }: { status: SyncStatus; onSyncNow: () => void; hasToken: boolean }) {
+function SyncIndicator({ status, syncError, onSyncNow, hasToken }: { status: SyncStatus; syncError: SyncError; onSyncNow: () => void; hasToken: boolean }) {
   if (!hasToken) return null
+
+  const errorLabel = syncError
+    ? `동기화 실패: ${syncError} — 탭하여 재시도`
+    : '동기화 실패 — 탭하여 재시도'
 
   const icons: Record<SyncStatus, React.ReactNode> = {
     idle: (
@@ -37,18 +42,27 @@ function SyncIndicator({ status, onSyncNow, hasToken }: { status: SyncStatus; on
       </span>
     ),
     error: (
-      <button onClick={onSyncNow} title="동기화 실패 — 재시도" className="text-red-400 hover:text-red-600 p-1">
-        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-      </button>
+      <div className="relative group">
+        <button onClick={onSyncNow} title={errorLabel} className="text-red-400 hover:text-red-600 p-1">
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </button>
+        {syncError && (
+          <div className="absolute right-0 top-8 z-50 hidden group-hover:block w-64 bg-gray-900 text-white text-xs rounded-lg px-3 py-2 shadow-lg">
+            <p className="font-medium text-red-300 mb-1">동기화 실패</p>
+            <p className="font-mono break-all">{syncError}</p>
+            <p className="mt-1 text-gray-400">설정에서 Token·Gist ID를 확인하세요</p>
+          </div>
+        )}
+      </div>
     ),
   }
 
   return <span className="flex items-center">{icons[status]}</span>
 }
 
-export default function Header({ search, onSearch, onAdd, onImport, onSettings, syncStatus, onSyncNow, hasToken }: Props) {
+export default function Header({ search, onSearch, onAdd, onImport, onSettings, syncStatus, syncError, onSyncNow, hasToken }: Props) {
   return (
     <header className="bg-white border-b border-gray-200 sticky top-0 z-30">
       <div className="max-w-5xl mx-auto px-4 h-14 flex items-center gap-3">
@@ -71,7 +85,7 @@ export default function Header({ search, onSearch, onAdd, onImport, onSettings, 
 
         {/* Actions */}
         <div className="flex items-center gap-1 shrink-0">
-          <SyncIndicator status={syncStatus} onSyncNow={onSyncNow} hasToken={hasToken} />
+          <SyncIndicator status={syncStatus} syncError={syncError} onSyncNow={onSyncNow} hasToken={hasToken} />
 
           <button
             onClick={onImport}

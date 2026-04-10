@@ -15,4 +15,5 @@ export interface GistData {
 }
 
 export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'error'
+export type SyncError = string | null
 export type ReadFilter = 'all' | 'read' | 'unread'
